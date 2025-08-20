@@ -1,0 +1,3 @@
+[tools.go]
+version = "1.25.0"
+backend = "core:go"

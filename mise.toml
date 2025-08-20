@@ -1,0 +1,9 @@
+[tools]
+go = "1.25"
+
+[tasks.main]
+run = "go run ./cmd/knight"
+sources = ["**/*.go"]
+
+[tasks.dev]
+run = "mise watch -r main"
