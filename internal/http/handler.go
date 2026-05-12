@@ -190,7 +190,7 @@ func (h *handler) handleReceivePack(w http.ResponseWriter, r *http.Request) {
 	defer reader.Close()
 
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Content-Type", "application/x-git-upload-pack-result")
+	w.Header().Set("Content-Type", "application/x-git-receive-pack-result")
 	w.WriteHeader(http.StatusOK)
 
 	err = repo.ReceivePackHTTP(reader, w, w)
