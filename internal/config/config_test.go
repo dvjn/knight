@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -348,6 +349,45 @@ func TestInitializeInvalidHTTPReadHeaderTimeout(t *testing.T) {
 
 	if _, err := Initialize(); err == nil {
 		t.Fatal("Initialize() error = nil, want error")
+	}
+}
+
+func TestValidateReposPath(t *testing.T) {
+	if err := validateReposPath(t.TempDir()); err != nil {
+		t.Fatalf("validateReposPath() error = %v", err)
+	}
+
+	f := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := validateReposPath(f); err == nil {
+		t.Fatal("validateReposPath() error = nil for non-directory, want error")
+	}
+}
+
+func TestValidateGitBinaryMissingFromPATH(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	if err := validateGitBinary(); err == nil {
+		t.Fatal("validateGitBinary() error = nil, want error")
+	}
+}
+
+func TestValidateGitBinary(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH:", err)
+	}
+	if err := validateGitBinary(); err != nil {
+		t.Fatalf("validateGitBinary() error = %v", err)
+	}
+}
+
+func TestValidateRuntime(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH:", err)
+	}
+	if err := ValidateRuntime(&Config{ReposPath: t.TempDir()}); err != nil {
+		t.Fatalf("ValidateRuntime() error = %v", err)
 	}
 }
 

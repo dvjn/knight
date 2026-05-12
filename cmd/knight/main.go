@@ -18,6 +18,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if err := config.ValidateRuntime(cfg); err != nil {
+		log.Fatalf("runtime validation: %v", err)
+	}
 
 	git := git.New(cfg)
 

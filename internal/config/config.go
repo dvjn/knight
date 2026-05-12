@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -108,6 +110,57 @@ func Initialize() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func ValidateRuntime(cfg *Config) error {
+	log.Println("validating git binary and repos path")
+	if err := validateGitBinary(); err != nil {
+		return err
+	}
+	if err := validateReposPath(cfg.ReposPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateGitBinary() error {
+	if _, err := exec.LookPath("git"); err != nil {
+		return fmt.Errorf("git not found on PATH: %w", err)
+	}
+	return nil
+}
+
+func validateReposPath(path string) error {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("repos path: %w", err)
+	}
+	fi, err := os.Stat(abs)
+	if err != nil {
+		return fmt.Errorf("repos path %q: %w", abs, err)
+	}
+	if !fi.IsDir() {
+		return fmt.Errorf("repos path %q is not a directory", abs)
+	}
+	f, err := os.CreateTemp(abs, ".knight-startup-check-*")
+	if err != nil {
+		return fmt.Errorf("repos path %q is not writable: %w", abs, err)
+	}
+	name := f.Name()
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("repos path %q: %w", abs, err)
+	}
+	if err := os.Remove(name); err != nil {
+		return fmt.Errorf("repos path %q: %w", abs, err)
+	}
+	d, err := os.Open(abs)
+	if err != nil {
+		return fmt.Errorf("repos path %q is not readable: %w", abs, err)
+	}
+	if err := d.Close(); err != nil {
+		return fmt.Errorf("repos path %q: %w", abs, err)
+	}
+	return nil
 }
 
 func getEnv(key, defaultValue string) string {
