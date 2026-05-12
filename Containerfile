@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.26.3-alpine AS build
+FROM --platform=$BUILDPLATFORM docker.io/library/golang:1.26.3-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -16,7 +16,7 @@ COPY . .
 RUN --mount=type=cache,target=${GOPATH} \
     go build -buildvcs=false -ldflags '-s -w' -o bin/knight ./cmd/knight
 
-FROM alpine/git:v2.49.1 AS app
+FROM docker.io/alpine/git:v2.49.1 AS app
 
 WORKDIR /app
 COPY --from=build /app/bin/knight /app/bin/knight
