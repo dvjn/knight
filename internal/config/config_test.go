@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tg123/go-htpasswd"
 	"golang.org/x/crypto/bcrypt"
@@ -56,6 +57,51 @@ func TestGetBoolEnv(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParseDurationEnv(t *testing.T) {
+	key := "KNIGHT_TEST_PARSE_DURATION_48291"
+	t.Cleanup(func() { os.Unsetenv(key) })
+
+	t.Run("unset uses default", func(t *testing.T) {
+		os.Unsetenv(key)
+		d, err := parseDurationEnv(key, "90s")
+		if err != nil {
+			t.Fatalf("parseDurationEnv() error = %v", err)
+		}
+		if d != 90*time.Second {
+			t.Fatalf("parseDurationEnv() = %v, want 90s", d)
+		}
+	})
+
+	t.Run("blank uses default", func(t *testing.T) {
+		t.Setenv(key, "  ")
+		d, err := parseDurationEnv(key, "3m")
+		if err != nil {
+			t.Fatalf("parseDurationEnv() error = %v", err)
+		}
+		if d != 3*time.Minute {
+			t.Fatalf("parseDurationEnv() = %v, want 3m", d)
+		}
+	})
+
+	t.Run("zero literal", func(t *testing.T) {
+		t.Setenv(key, "0")
+		d, err := parseDurationEnv(key, "9h")
+		if err != nil {
+			t.Fatalf("parseDurationEnv() error = %v", err)
+		}
+		if d != 0 {
+			t.Fatalf("parseDurationEnv() = %v, want 0", d)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Setenv(key, "not-a-duration")
+		if _, err := parseDurationEnv(key, "1s"); err == nil {
+			t.Fatal("parseDurationEnv() error = nil, want error")
+		}
+	})
 }
 
 func TestEnsureReposDir(t *testing.T) {
@@ -229,6 +275,15 @@ func TestInitializeHTTPOnly(t *testing.T) {
 	if cfg.HTPasswd == nil || !cfg.HTPasswd.Match("dev", "secret") {
 		t.Fatal("HTPasswd not initialized correctly")
 	}
+	if cfg.HTTPReadHeaderTimeout != 30*time.Second {
+		t.Fatalf("HTTPReadHeaderTimeout = %v, want 30s", cfg.HTTPReadHeaderTimeout)
+	}
+	if cfg.HTTPIdleTimeout != 5*time.Minute {
+		t.Fatalf("HTTPIdleTimeout = %v, want 5m", cfg.HTTPIdleTimeout)
+	}
+	if cfg.HTTPReadTimeout != 0 || cfg.HTTPWriteTimeout != 0 {
+		t.Fatalf("HTTPReadTimeout = %v, HTTPWriteTimeout = %v, want 0", cfg.HTTPReadTimeout, cfg.HTTPWriteTimeout)
+	}
 }
 
 func TestInitializeSSHOnly(t *testing.T) {
@@ -264,6 +319,12 @@ func TestInitializeSSHOnly(t *testing.T) {
 	if len(cfg.AuthorizedKeys) != 1 {
 		t.Fatalf("len(AuthorizedKeys) = %d, want 1", len(cfg.AuthorizedKeys))
 	}
+	if cfg.SSHIdleTimeout != 10*time.Minute {
+		t.Fatalf("SSHIdleTimeout = %v, want 10m", cfg.SSHIdleTimeout)
+	}
+	if cfg.SSHMaxTimeout != 0 {
+		t.Fatalf("SSHMaxTimeout = %v, want 0", cfg.SSHMaxTimeout)
+	}
 }
 
 func TestInitializeReturnsParseError(t *testing.T) {
@@ -272,6 +333,18 @@ func TestInitializeReturnsParseError(t *testing.T) {
 	t.Setenv("ENABLE_HTTP", "false")
 	t.Setenv("SSH_SIGNER_KEY", "invalid")
 	t.Setenv("AUTHORIZED_KEYS", testAuthorizedKey(t))
+
+	if _, err := Initialize(); err == nil {
+		t.Fatal("Initialize() error = nil, want error")
+	}
+}
+
+func TestInitializeInvalidHTTPReadHeaderTimeout(t *testing.T) {
+	t.Setenv("REPOS_PATH", filepath.Join(t.TempDir(), "repos"))
+	t.Setenv("ENABLE_SSH", "false")
+	t.Setenv("ENABLE_HTTP", "true")
+	t.Setenv("HTTP_HTPASSWD", testHTPasswdContent(t, "dev", "secret"))
+	t.Setenv("HTTP_READ_HEADER_TIMEOUT", "not-a-duration")
 
 	if _, err := Initialize(); err == nil {
 		t.Fatal("Initialize() error = nil, want error")

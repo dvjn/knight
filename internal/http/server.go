@@ -18,8 +18,12 @@ func Server(cfg *config.Config, h *handler) *server {
 	return &server{
 		cfg: cfg,
 		server: &http.Server{
-			Addr:    net.JoinHostPort(cfg.HTTPHost, cfg.HTTPPort),
-			Handler: h.Handler(),
+			Addr:              net.JoinHostPort(cfg.HTTPHost, cfg.HTTPPort),
+			Handler:           h.Handler(),
+			ReadHeaderTimeout: cfg.HTTPReadHeaderTimeout,
+			ReadTimeout:       cfg.HTTPReadTimeout,
+			WriteTimeout:      cfg.HTTPWriteTimeout,
+			IdleTimeout:       cfg.HTTPIdleTimeout,
 		},
 	}
 }

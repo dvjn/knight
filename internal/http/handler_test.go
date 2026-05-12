@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/dvjn/knight/internal/config"
 	"github.com/dvjn/knight/internal/git"
@@ -269,6 +270,15 @@ func TestServerConstructor(t *testing.T) {
 	if s.server.Handler == nil {
 		t.Fatal("server.Handler = nil")
 	}
+	if s.server.ReadHeaderTimeout != 30*time.Second {
+		t.Fatalf("ReadHeaderTimeout = %v, want 30s", s.server.ReadHeaderTimeout)
+	}
+	if s.server.IdleTimeout != 5*time.Minute {
+		t.Fatalf("IdleTimeout = %v, want 5m", s.server.IdleTimeout)
+	}
+	if s.server.ReadTimeout != 0 || s.server.WriteTimeout != 0 {
+		t.Fatalf("ReadTimeout = %v, WriteTimeout = %v, want 0", s.server.ReadTimeout, s.server.WriteTimeout)
+	}
 }
 
 func newTestHandler(t *testing.T) *handler {
@@ -280,11 +290,13 @@ func newTestHandler(t *testing.T) *handler {
 	}
 
 	cfg := &config.Config{
-		ReposPath:     reposPath,
-		InitialBranch: "main",
-		HTTPHost:      "127.0.0.1",
-		HTTPPort:      "8080",
-		HTPasswd:      testHTPasswdFile(t, "dev", "secret"),
+		ReposPath:             reposPath,
+		InitialBranch:         "main",
+		HTTPHost:              "127.0.0.1",
+		HTTPPort:              "8080",
+		HTPasswd:              testHTPasswdFile(t, "dev", "secret"),
+		HTTPReadHeaderTimeout: 30 * time.Second,
+		HTTPIdleTimeout:       5 * time.Minute,
 	}
 
 	return Handler(cfg, git.New(cfg))

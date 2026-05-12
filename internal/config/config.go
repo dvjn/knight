@@ -1,9 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/tg123/go-htpasswd"
 	gossh "golang.org/x/crypto/ssh"
@@ -23,6 +25,14 @@ type Config struct {
 	HTTPHost   string
 	HTTPPort   string
 	HTPasswd   *htpasswd.File
+
+	HTTPReadHeaderTimeout time.Duration
+	HTTPReadTimeout       time.Duration
+	HTTPWriteTimeout      time.Duration
+	HTTPIdleTimeout       time.Duration
+
+	SSHIdleTimeout time.Duration
+	SSHMaxTimeout  time.Duration
 }
 
 func Initialize() (*Config, error) {
@@ -53,6 +63,15 @@ func Initialize() (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		cfg.SSHIdleTimeout, err = parseDurationEnv("SSH_IDLE_TIMEOUT", "10m")
+		if err != nil {
+			return nil, err
+		}
+		cfg.SSHMaxTimeout, err = parseDurationEnv("SSH_MAX_TIMEOUT", "0")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cfg.EnableHTTP = getBoolEnv("ENABLE_HTTP", true)
@@ -62,6 +81,23 @@ func Initialize() (*Config, error) {
 
 		log.Println("initializing http htpasswd file")
 		cfg.HTPasswd, err = getHtpasswd("HTTP_HTPASSWD", "@config/htpasswd")
+		if err != nil {
+			return nil, err
+		}
+
+		cfg.HTTPReadHeaderTimeout, err = parseDurationEnv("HTTP_READ_HEADER_TIMEOUT", "30s")
+		if err != nil {
+			return nil, err
+		}
+		cfg.HTTPReadTimeout, err = parseDurationEnv("HTTP_READ_TIMEOUT", "0")
+		if err != nil {
+			return nil, err
+		}
+		cfg.HTTPWriteTimeout, err = parseDurationEnv("HTTP_WRITE_TIMEOUT", "0")
+		if err != nil {
+			return nil, err
+		}
+		cfg.HTTPIdleTimeout, err = parseDurationEnv("HTTP_IDLE_TIMEOUT", "5m")
 		if err != nil {
 			return nil, err
 		}
@@ -86,6 +122,21 @@ func getBoolEnv(key string, defaultValue bool) bool {
 		return value != "false" && value != "0"
 	}
 	return defaultValue
+}
+
+func parseDurationEnv(key, defaultLiteral string) (time.Duration, error) {
+	s, ok := os.LookupEnv(key)
+	if !ok || strings.TrimSpace(s) == "" {
+		s = defaultLiteral
+	}
+	if s == "0" || s == "-1" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return d, nil
 }
 
 func ensureReposDir(path string) {

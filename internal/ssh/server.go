@@ -22,6 +22,8 @@ func Server(cfg *config.Config, h *handler) *server {
 			Addr:        net.JoinHostPort(cfg.SSHHost, cfg.SSHPort),
 			Banner:      "Welcome to knight!\n",
 			HostSigners: []ssh.Signer{cfg.SSHSigner},
+			IdleTimeout: cfg.SSHIdleTimeout,
+			MaxTimeout:  cfg.SSHMaxTimeout,
 			ConnCallback: func(ctx ssh.Context, conn net.Conn) net.Conn {
 				log.Println("ssh connection", conn.RemoteAddr())
 				return conn
