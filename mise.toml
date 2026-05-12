@@ -1,9 +1,14 @@
 [tools]
 go = "1.26.3"
 
+[tasks.setup]
+run = "go run ./cmd/setup"
+sources = ["cmd/setup/**/*.go"]
+
 [tasks.main]
 run = "go run ./cmd/knight"
 sources = ["**/*.go"]
 
 [tasks.dev]
+tools.watchexec = "2.5.1"
 run = "mise watch -r main"
