@@ -9,6 +9,10 @@ sources = ["cmd/setup/**/*.go"]
 run = "go run ./cmd/knight"
 sources = ["**/*.go"]
 
+[tasks.test]
+run = "go test ./..."
+sources = ["**/*.go"]
+
 [tasks.dev]
 tools.watchexec = "2.5.1"
 run = "mise watch -r main"
