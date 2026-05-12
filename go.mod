@@ -1,6 +1,6 @@
 module github.com/dvjn/knight
 
-go 1.25.0
+go 1.26.3
 
 require (
 	github.com/cyphar/filepath-securejoin v0.6.1
